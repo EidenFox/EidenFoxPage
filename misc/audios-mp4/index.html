@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Indexador de Diretório - EidenFox</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Merienda:wght@300..900&family=Permanent+Marker&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            color: aliceblue;
+        }
+
+        body {    
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            background-color: #2a2a2a;
+            background-image: url('https://images3.alphacoders.com/133/thumb-1920-1332803.png');
+            background-size: cover;
+            background-attachment: fixed;
+            background-position: center;
+            font-family: 'Merienda', cursive;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7); 
+            backdrop-filter: blur(7px);
+            -webkit-backdrop-filter: blur(7px);
+            z-index: -1;
+            top: 0;
+            left: 0;
+        }
+
+        h2.diretorio-titulo {
+            padding: 0.5rem;
+            background: rgba(182, 182, 182, 0.22);
+            border-radius: 16px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            text-shadow: #ff008c 3px 3px;
+            letter-spacing: 2px;
+            margin: 20px auto 0 auto;
+            text-align: center;
+            max-width: 800px;
+            width: 90%;
+        }
+
+        header {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            min-height: 25vh;
+            background-image: url('https://images3.alphacoders.com/133/thumb-1920-1332803.png');
+            background-size: cover;
+            background-position: center 60%;
+            box-shadow: #ff0073 0px 2px 15px;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .header-div {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+        }
+
+        .header-div > h1 {
+            font-family: "Permanent Marker", cursive;
+            font-size: 3rem;
+            text-shadow: #ff0073 1px 5px 10px;
+            text-align: center;
+        }
+
+        .content {
+            padding: 20px;
+            flex: 1;
+            width: 100%;
+        }
+
+        .file-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            padding: 1.2rem;
+            background: rgba(182, 182, 182, 0.15);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 0, 123, 0.4);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(3px);
+            -webkit-backdrop-filter: blur(3px);
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .file-item:hover {
+            background-color: rgba(51, 0, 46, 0.4);
+            border-color: rgba(255, 0, 225, 0.8);
+            box-shadow: 0 0px 20px rgba(255, 0, 225, 0.5);
+            transform: translateX(8px);
+        }
+
+        .file-name {
+            color: aquamarine;
+            font-family: 'Merienda', cursive;
+            font-size: 1.1rem;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.6);
+        }
+
+        .back-item {
+            border: 1px dashed rgba(0, 255, 234, 0.4);
+            background: rgba(0, 51, 46, 0.2);
+        }
+        
+        .back-item .file-name {
+            color: #00ffff;
+        }
+
+        #loading, .error-message {
+            text-align: center;
+            font-size: 1.2rem;
+            padding: 2rem;
+            color: #ff0073;
+            text-shadow: 1px 1px 2px black;
+        }
+
+        footer {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 10rem;
+            background-image: url('https://images3.alphacoders.com/133/thumb-1920-1332803.png');
+            background-size: cover;
+            background-position: center 60%;
+            box-shadow: #ff0073 0px 2px 15px;
+            border-radius: 0.5rem;
+            margin-top: 2rem;
+        }
+
+        footer > p {
+            padding: 0.4rem 0.9rem;
+            border-radius: 0.5rem;
+            background: rgba(182, 182, 182, 0.22);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body class="body-background">
+
+    <header>
+        <div class="header-div">
+            <h1>Arquivos do Servidor</h1>
+        </div>
+    </header>
+
+    <h2 id="current-dir" class="diretorio-titulo">Diretório: /</h2>
+
+    <section class="content">
+        <div id="file-container" class="file-list">
+            <p id="loading">Buscando lista de arquivos...</p>
+        </div>
+    </section>
+
+    <footer>
+        <p>&copy; 2025 EidenFox. Todos os direitos reservados.</p>
+        <p style="margin-top: 5px;">Desenvolvido por EidenFox</p>
+    </footer>
+
+    <script>
+        async function listDynamicFiles() {
+            const user = 'EidenFox';
+            const repo = 'EidenFoxPage';
+            const container = document.getElementById('file-container');
+            const dirTitle = document.getElementById('current-dir');
+
+            const urlPath = window.location.pathname;
+            
+            const segments = urlPath.split('/').filter(segment => segment.length > 0 && !segment.endsWith('.html'));
+            
+            const currentFullPath = segments.join('/');
+
+            dirTitle.innerText = `Diretório: /${segments.length > 0 ? segments.join('/') + '/' : ''}`;
+
+            try {
+                const apiPath = currentFullPath ? currentFullPath : '';
+                const response = await fetch(`https://api.github.com/repos/${user}/${repo}/contents/${apiPath}`);
+                
+                if (!response.ok) throw new Error("Falha na comunicação com a API");
+                
+                const data = await response.json();
+                container.innerHTML = ''; 
+
+                if (segments.length > 0) {
+                    const backA = document.createElement('a');
+                    backA.href = '../';
+                    backA.className = 'file-item back-item';
+                    backA.innerHTML = `<span class="file-name">📁 .. (Voltar para o diretório anterior)</span>`;
+                    container.appendChild(backA);
+                }
+
+                if (data.length === 0 || !Array.isArray(data)) {
+                    container.innerHTML += '<p class="error-message">Nenhum arquivo encontrado neste diretório.</p>';
+                    return;
+                }
+
+                data.sort((a, b) => (b.type === 'dir') - (a.type === 'dir'));
+
+                data.forEach(file => {
+                    if (file.name !== 'index.html') {
+                        const a = document.createElement('a');
+                        
+                        if (file.type === 'dir') {
+                            a.href = `${file.name}/`;
+                            a.className = 'file-item';
+                            a.innerHTML = `<span class="file-name">📁 ${file.name}/</span>`;
+                        } else {
+                            a.href = file.name;
+                            a.className = 'file-item';
+                            a.innerHTML = `<span class="file-name">📄 ${file.name}</span>`;
+                        }
+                        container.appendChild(a);
+                    }
+                });
+            } catch (error) {
+                container.innerHTML = '<p class="error-message">Erro ao carregar os arquivos deste diretório.</p>';
+                console.error("Erro na API do GitHub:", error);
+            }
+        }
+
+        listDynamicFiles();
+    </script>
+</body>
+</html>
