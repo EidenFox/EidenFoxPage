@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conversor JSON para SQL</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Merienda:wght@300..900&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-color: #120118;
+            --panel-bg: #1e0a24;
+            --text-color: aliceblue;
+            --neon-pink: #ff0073;
+            --neon-purple: #81008a;
+            --neon-blue: #00d2ff;
+            --border-color: rgba(255, 0, 115, 0.5);
+            --header-bg: #2a0b30;
+            --error-bg: rgba(255, 0, 0, 0.2);
+            --error-border: #ff3333;
+            --font-mono: 'Courier New', Courier, monospace;
+            --font-title: 'Merienda', cursive;
+            --box-height: 65vh;
+            
+            /* Cores de Sintaxe SQL (Dark Mode) */
+            --syn-keyword: #ff0073;
+            --syn-string: #00ff66;
+            --syn-number: #ff9900;
+            --syn-type: #00d2ff;
+            --syn-null: #ff5555;
+        }
+
+        body.light-mode {
+            --bg-color: #f4f4f9;
+            --panel-bg: #ffffff;
+            --text-color: #333333;
+            --border-color: #ff0073;
+            --header-bg: #ffe6f0;
+            --error-bg: #ffe6e6;
+            --error-border: #cc0000;
+
+            /* Cores de Sintaxe SQL (Light Mode) */
+            --syn-keyword: #d60060;
+            --syn-string: #008822;
+            --syn-number: #cc6600;
+            --syn-type: #0066cc;
+            --syn-null: #cc0000;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.2s, color 0.2s;
+        }
+
+        h1, h2, h3, .col-header span {
+            font-family: var(--font-title);
+        }
+
+        h1 {
+            text-align: center;
+            text-shadow: var(--neon-pink) 2px 2px;
+            margin-bottom: 30px;
+        }
+
+        .header-controls {
+            background: var(--panel-bg);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 15px rgba(255, 0, 115, 0.1);
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        input[type="text"], select {
+            background: var(--bg-color);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 6px 10px;
+            font-family: inherit;
+        }
+
+        input[type="text"]:focus {
+            outline: 1px solid var(--neon-pink);
+        }
+
+        button, .file-label {
+            background-color: var(--neon-pink);
+            color: aliceblue;
+            border: 1px solid var(--neon-purple);
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s, box-shadow 0.2s;
+            font-family: var(--font-title);
+            font-size: 14px;
+        }
+
+        button:hover, .file-label:hover {
+            background-color: #d60060;
+            box-shadow: 0 0 10px rgba(255, 0, 115, 0.5);
+        }
+
+        .btn-toggle {
+            background-color: transparent;
+            border: 1px solid var(--neon-pink);
+            color: var(--text-color);
+        }
+
+        .btn-toggle:hover {
+            background-color: rgba(255, 0, 115, 0.2);
+        }
+
+        .btn-secondary {
+            background-color: transparent;
+            border: 1px solid var(--neon-purple);
+            color: var(--text-color);
+        }
+        
+        .btn-secondary:hover {
+            background-color: rgba(129, 0, 138, 0.3);
+        }
+
+        .file-label {
+            padding: 8px 16px;
+            display: inline-block;
+        }
+
+        .grid-container {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 900px) {
+            .grid-container {
+                flex-direction: column;
+            }
+        }
+
+        .input-col {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .col-header {
+            background: var(--header-bg);
+            padding: 10px 15px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .editor-wrapper {
+            display: flex;
+            height: var(--box-height);
+            background-color: var(--bg-color);
+            position: relative;
+        }
+
+        .line-numbers {
+            padding: 15px 10px;
+            text-align: right;
+            background-color: var(--panel-bg);
+            color: #777;
+            border-right: 1px solid var(--border-color);
+            font-family: var(--font-mono);
+            font-size: 14px;
+            line-height: 1.5;
+            user-select: none;
+            min-width: 45px;
+            box-sizing: border-box;
+            overflow: hidden;
+            white-space: pre;
+        }
+
+        textarea, .code-output {
+            flex: 1;
+            height: 100%;
+            background-color: transparent;
+            color: var(--text-color);
+            border: none;
+            padding: 15px;
+            font-family: var(--font-mono);
+            font-size: 14px;
+            line-height: 1.5;
+            box-sizing: border-box;
+            overflow-wrap: normal;
+            overflow: auto;
+            margin: 0;
+            white-space: pre;
+        }
+
+        textarea {
+            resize: none;
+        }
+
+        textarea:focus {
+            outline: none;
+        }
+        
+        .editor-wrapper:focus-within {
+            outline: 1px solid var(--neon-pink);
+            outline-offset: -1px;
+        }
+
+        #status-message {
+            display: none;
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+            font-family: var(--font-mono);
+            font-size: 13px;
+            border: 1px solid transparent;
+        }
+
+        .status-error {
+            background-color: var(--error-bg);
+            color: var(--error-border);
+            border-color: var(--error-border) !important;
+        }
+
+        /* Classes de Destaque SQL */
+        .sql-keyword { color: var(--syn-keyword); font-weight: bold; }
+        .sql-type { color: var(--syn-type); font-weight: bold; }
+        .sql-string { color: var(--syn-string); }
+        .sql-number { color: var(--syn-number); }
+        .sql-null { color: var(--syn-null); font-weight: bold; }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-color);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--neon-pink);
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Conversor JSON para SQL</h1>
+
+    <div class="header-controls">
+        <button class="btn-toggle" onclick="toggleTheme()">Alternar Tema</button>
+        
+        <label class="file-label">
+            Importar JSON
+            <input type="file" accept=".json,.txt,*/*" onchange="loadFile(event)" style="display:none;">
+        </label>
+
+        <div class="control-group">
+            <label for="tableName" style="font-size: 14px; font-weight: bold;">Tabela:</label>
+            <input type="text" id="tableName" value="registros" placeholder="Nome da tabela">
+        </div>
+
+        <div class="control-group">
+            <select id="sqlDialect">
+                <option value="mysql">MySQL</option>
+                <option value="postgres">PostgreSQL</option>
+            </select>
+            <button onclick="processConversion()">Converter para SQL</button>
+        </div>
+
+        <button class="btn-secondary" onclick="clearAll()">Limpar</button>
+    </div>
+
+    <div id="status-message"></div>
+
+    <div class="grid-container">
+        <!-- Coluna: Entrada JSON -->
+        <div class="input-col">
+            <div class="col-header">
+                <span>Entrada (Array de Objetos JSON)</span>
+            </div>
+            <div class="editor-wrapper">
+                <div class="line-numbers" id="inputLines">1</div>
+                <textarea id="inputJson" placeholder='Ex: [ { "id": 1, "nome": "Fox" } ]' spellcheck="false" 
+                          oninput="updateLines('inputJson', 'inputLines')" 
+                          onscroll="syncScroll('inputJson', 'inputLines')"></textarea>
+            </div>
+        </div>
+        
+        <!-- Coluna: Saída SQL -->
+        <div class="input-col">
+            <div class="col-header">
+                <span>Saída SQL Gerada</span>
+                <button onclick="copyOutput()" style="padding: 4px 8px; font-size: 12px;">Copiar SQL</button>
+            </div>
+            <div class="editor-wrapper">
+                <div class="line-numbers" id="outputLines">1</div>
+                <pre id="outputSql" class="code-output" onscroll="syncScroll('outputSql', 'outputLines')"></pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleTheme() {
+            document.body.classList.toggle('light-mode');
+        }
+
+        function loadFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('inputJson').value = e.target.result;
+                updateLines('inputJson', 'inputLines');
+                hideStatus();
+                processConversion(); 
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        function escapeHtml(unsafe) {
+            return (unsafe || '').toString()
+                                .replace(/&/g, "&amp;")
+                                .replace(/</g, "&lt;")
+                                .replace(/>/g, "&gt;")
+                                .replace(/"/g, "&quot;")
+                                .replace(/'/g, "&#039;");
+        }
+
+        function sqlHighlight(sqlText) {
+            let highlighted = escapeHtml(sqlText);
+
+            // Strings ('valor')
+            highlighted = highlighted.replace(/('.*?')/g, '<span class="sql-string">$1</span>');
+            
+            // Keywords
+            const keywords = ['CREATE TABLE', 'INSERT INTO', 'VALUES', 'IF NOT EXISTS'];
+            keywords.forEach(kw => {
+                const reg = new RegExp(`\\b${kw}\\b`, 'gi');
+                highlighted = highlighted.replace(reg, `<span class="sql-keyword">${kw}</span>`);
+            });
+
+            // Types
+            const types = ['VARCHAR', 'TEXT', 'INT', 'INTEGER', 'DECIMAL', 'BOOLEAN', 'JSON', 'JSONB', 'SERIAL', 'BIGINT'];
+            types.forEach(type => {
+                const reg = new RegExp(`\\b${type}\\b(?:\\([0-9,]+\\))?`, 'gi');
+                highlighted = highlighted.replace(reg, match => `<span class="sql-type">${match}</span>`);
+            });
+
+            // NULL and Booleans
+            highlighted = highlighted.replace(/\bNULL\b/g, '<span class="sql-null">NULL</span>');
+            highlighted = highlighted.replace(/\b(TRUE|FALSE)\b/gi, '<span class="sql-keyword">$1</span>');
+            
+            // Numbers (simples, fora de strings)
+            highlighted = highlighted.replace(/\b(\d+(?:\.\d+)?)\b/g, function(match, p1, offset, string) {
+                // Previne conflito caso o numero ja esteja dentro de uma tag span
+                if(string.substring(offset - 10, offset).includes('<span')) return match;
+                return `<span class="sql-number">${match}</span>`;
+            });
+
+            return highlighted;
+        }
+
+        function detectSqlType(value, dialect) {
+            if (value === null || value === undefined) return dialect === 'mysql' ? 'VARCHAR(255)' : 'TEXT';
+            
+            const type = typeof value;
+            
+            if (type === 'string') {
+                // Testa se parece uma data ISO para possivel type DATETIME, mas fallback seguro é texto
+                if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value)) return 'TIMESTAMP';
+                return dialect === 'mysql' ? 'VARCHAR(255)' : 'TEXT';
+            }
+            if (type === 'number') {
+                return Number.isInteger(value) ? 'INT' : 'DECIMAL(10,2)';
+            }
+            if (type === 'boolean') {
+                return 'BOOLEAN';
+            }
+            if (type === 'object') {
+                return dialect === 'postgres' ? 'JSONB' : 'JSON';
+            }
+            
+            return 'VARCHAR(255)';
+        }
+
+        function formatSqlValue(value) {
+            if (value === null || value === undefined) return 'NULL';
+            
+            const type = typeof value;
+            
+            if (type === 'string') {
+                // Escapa aspas simples no SQL duplicando-as
+                return `'${value.replace(/'/g, "''")}'`;
+            }
+            if (type === 'object') {
+                // Transforma arrays/objetos em string JSON e escapa
+                const jsonStr = JSON.stringify(value);
+                return `'${jsonStr.replace(/'/g, "''")}'`;
+            }
+            if (type === 'boolean') {
+                return value ? 'TRUE' : 'FALSE';
+            }
+            return value.toString();
+        }
+
+        function processConversion() {
+            const input = document.getElementById('inputJson').value;
+            const outputArea = document.getElementById('outputSql');
+            let tableName = document.getElementById('tableName').value.trim() || 'registros';
+            const dialect = document.getElementById('sqlDialect').value;
+            
+            // Limpa caracteres especiais do nome da tabela e aplica delimitadores
+            tableName = tableName.replace(/[^a-zA-Z0-9_]/g, '');
+            const tableId = dialect === 'mysql' ? `\`${tableName}\`` : `"${tableName}"`;
+
+            if (!input.trim()) {
+                outputArea.innerHTML = '';
+                updateLines('outputSql', 'outputLines');
+                hideStatus();
+                return;
+            }
+
+            try {
+                let data = JSON.parse(input);
+                
+                // Força ser um array de objetos
+                if (!Array.isArray(data)) {
+                    if (typeof data === 'object' && data !== null) {
+                        data = [data];
+                    } else {
+                        throw new Error("O JSON raiz deve ser um Objeto ou um Array de Objetos.");
+                    }
+                }
+                if (data.length === 0) {
+                    throw new Error("O Array JSON está vazio.");
+                }
+
+                // 1. Extrair Schema (baseado no primeiro objeto, ou mesclando todos)
+                // Para simplificar, vamos extrair as colunas do primeiro objeto
+                const columns = {};
+                data.forEach(row => {
+                    if(typeof row === 'object' && row !== null) {
+                        Object.keys(row).forEach(key => {
+                            if (!columns[key] || columns[key] === 'VARCHAR(255)' || columns[key] === 'TEXT') {
+                                columns[key] = detectSqlType(row[key], dialect);
+                            }
+                        });
+                    }
+                });
+
+                if (Object.keys(columns).length === 0) {
+                    throw new Error("Nenhuma propriedade válida encontrada nos objetos.");
+                }
+
+                // 2. Gerar CREATE TABLE
+                let sqlOut = `CREATE TABLE IF NOT EXISTS ${tableId} (\n`;
+                const colDefs = Object.entries(columns).map(([colName, colType]) => {
+                    const colId = dialect === 'mysql' ? `\`${colName}\`` : `"${colName}"`;
+                    return `    ${colId} ${colType}`;
+                });
+                sqlOut += colDefs.join(',\n') + '\n);\n\n';
+
+                // 3. Gerar INSERT INTO (Lotes para melhor performance visual)
+                const colNames = Object.keys(columns);
+                const colIds = colNames.map(c => dialect === 'mysql' ? `\`${c}\`` : `"${c}"`).join(', ');
+                
+                sqlOut += `INSERT INTO ${tableId} (${colIds}) VALUES\n`;
+                
+                const valueRows = data.map(row => {
+                    const rowValues = colNames.map(col => {
+                        return formatSqlValue(row[col]);
+                    });
+                    return `(${rowValues.join(', ')})`;
+                });
+
+                sqlOut += valueRows.join(',\n') + ';\n';
+
+                // Renderiza Saída
+                outputArea.innerHTML = sqlHighlight(sqlOut);
+                updateLines('outputSql', 'outputLines');
+                hideStatus();
+
+            } catch (e) {
+                showStatus('Erro na conversão: ' + e.message, 'error');
+                outputArea.innerHTML = '';
+                updateLines('outputSql', 'outputLines');
+            }
+        }
+
+        function clearAll() {
+            document.getElementById('inputJson').value = '';
+            document.getElementById('outputSql').innerHTML = '';
+            updateLines('inputJson', 'inputLines');
+            updateLines('outputSql', 'outputLines');
+            hideStatus();
+        }
+
+        async function copyOutput() {
+            const outputText = document.getElementById('outputSql').innerText;
+            if (!outputText) return;
+            
+            try {
+                await navigator.clipboard.writeText(outputText);
+                const btn = event.target;
+                const originalText = btn.innerText;
+                btn.innerText = 'Copiado!';
+                setTimeout(() => btn.innerText = originalText, 2000);
+            } catch (err) {
+                console.error('Falha ao copiar: ', err);
+            }
+        }
+
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status-message');
+            statusDiv.textContent = message;
+            statusDiv.className = type === 'error' ? 'status-error' : 'status-success';
+            statusDiv.style.display = 'block';
+        }
+
+        function hideStatus() {
+            document.getElementById('status-message').style.display = 'none';
+        }
+
+        function updateLines(elementId, linesId) {
+            const el = document.getElementById(elementId);
+            const linesDiv = document.getElementById(linesId);
+            const text = el.tagName === 'TEXTAREA' ? el.value : el.innerText;
+            
+            const linesCount = (text.match(/\n/g) || []).length + 1;
+            
+            let linesText = '';
+            for (let i = 1; i <= linesCount; i++) {
+                linesText += i + '\n';
+            }
+            linesDiv.textContent = linesText;
+        }
+
+        function syncScroll(sourceId, targetLinesId) {
+            const source = document.getElementById(sourceId);
+            const linesDiv = document.getElementById(targetLinesId);
+            linesDiv.scrollTop = source.scrollTop;
+        }
+
+        window.onload = function() {
+            updateLines('inputJson', 'inputLines');
+            updateLines('outputSql', 'outputLines');
+        };
+    </script>
+</body>
+</html>

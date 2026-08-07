@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Mock Data (Faker.js)</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Merienda:wght@300..900&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-color: #120118;
+            --panel-bg: #1e0a24;
+            --text-color: aliceblue;
+            --neon-pink: #ff0073;
+            --neon-purple: #81008a;
+            --neon-blue: #00d2ff;
+            --border-color: rgba(255, 0, 115, 0.5);
+            --header-bg: #2a0b30;
+            --error-bg: rgba(255, 0, 0, 0.2);
+            --error-border: #ff3333;
+            --font-mono: 'Courier New', Courier, monospace;
+            --font-title: 'Merienda', cursive;
+            --box-height: 60vh;
+            
+            /* Cores de Sintaxe (Dark Mode) */
+            --syn-key: #ff0073;
+            --syn-string: #00d2ff;
+            --syn-number: #00ff66;
+            --syn-bool: #ff9900;
+            --syn-null: #ff5555;
+        }
+
+        body.light-mode {
+            --bg-color: #f4f4f9;
+            --panel-bg: #ffffff;
+            --text-color: #333333;
+            --border-color: #ff0073;
+            --header-bg: #ffe6f0;
+            --error-bg: #ffe6e6;
+            --error-border: #cc0000;
+
+            /* Cores de Sintaxe (Light Mode) */
+            --syn-key: #d60060;
+            --syn-string: #0066cc;
+            --syn-number: #008822;
+            --syn-bool: #cc6600;
+            --syn-null: #cc0000;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.2s, color 0.2s;
+        }
+
+        h1, h2, h3, .col-header span {
+            font-family: var(--font-title);
+        }
+
+        h1 {
+            text-align: center;
+            text-shadow: var(--neon-pink) 2px 2px;
+            margin-bottom: 30px;
+        }
+
+        .header-controls {
+            background: var(--panel-bg);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 15px rgba(255, 0, 115, 0.1);
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        input[type="text"], input[type="number"], select {
+            background: var(--bg-color);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 6px 10px;
+            font-family: inherit;
+        }
+
+        input[type="text"]:focus, input[type="number"]:focus {
+            outline: 1px solid var(--neon-pink);
+        }
+
+        button {
+            background-color: var(--neon-pink);
+            color: aliceblue;
+            border: 1px solid var(--neon-purple);
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s, box-shadow 0.2s;
+            font-family: var(--font-title);
+            font-size: 14px;
+        }
+
+        button:hover {
+            background-color: #d60060;
+            box-shadow: 0 0 10px rgba(255, 0, 115, 0.5);
+        }
+
+        .btn-toggle {
+            background-color: transparent;
+            border: 1px solid var(--neon-pink);
+            color: var(--text-color);
+        }
+
+        .btn-toggle:hover {
+            background-color: rgba(255, 0, 115, 0.2);
+        }
+
+        .btn-secondary {
+            background-color: transparent;
+            border: 1px solid var(--neon-purple);
+            color: var(--text-color);
+        }
+        
+        .btn-secondary:hover {
+            background-color: rgba(129, 0, 138, 0.3);
+        }
+
+        .btn-danger {
+            background-color: transparent;
+            border: 1px solid var(--error-border);
+            color: var(--error-border);
+            padding: 4px 8px;
+        }
+        
+        .btn-danger:hover {
+            background-color: var(--error-bg);
+        }
+
+        .grid-container {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 900px) {
+            .grid-container {
+                flex-direction: column;
+            }
+        }
+
+        .input-col {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .col-header {
+            background: var(--header-bg);
+            padding: 10px 15px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .editor-wrapper {
+            display: flex;
+            height: var(--box-height);
+            background-color: var(--bg-color);
+            position: relative;
+        }
+
+        .line-numbers {
+            padding: 15px 10px;
+            text-align: right;
+            background-color: var(--panel-bg);
+            color: #777;
+            border-right: 1px solid var(--border-color);
+            font-family: var(--font-mono);
+            font-size: 14px;
+            line-height: 1.5;
+            user-select: none;
+            min-width: 45px;
+            box-sizing: border-box;
+            overflow: hidden;
+            white-space: pre;
+        }
+
+        .code-output {
+            flex: 1;
+            height: 100%;
+            background-color: transparent;
+            color: var(--text-color);
+            border: none;
+            padding: 15px;
+            font-family: var(--font-mono);
+            font-size: 14px;
+            line-height: 1.5;
+            box-sizing: border-box;
+            overflow-wrap: normal;
+            overflow: auto;
+            margin: 0;
+            white-space: pre;
+        }
+        
+        .editor-wrapper:focus-within {
+            outline: 1px solid var(--neon-pink);
+            outline-offset: -1px;
+        }
+
+        .schema-builder {
+            flex: 1;
+            padding: 15px;
+            background-color: var(--bg-color);
+            overflow-y: auto;
+            height: var(--box-height);
+            box-sizing: border-box;
+        }
+
+        .schema-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+            background: var(--panel-bg);
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+        }
+
+        .schema-row input[type="text"] {
+            flex: 1;
+        }
+
+        .key { color: var(--syn-key); font-weight: bold; }
+        .string { color: var(--syn-string); }
+        .number { color: var(--syn-number); }
+        .boolean { color: var(--syn-bool); font-style: italic; }
+        .null { color: var(--syn-null); font-weight: bold; }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-color);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--neon-pink);
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Gerador de Mock Data (Faker.js)</h1>
+
+    <div class="header-controls">
+        <button class="btn-toggle" onclick="toggleTheme()">Alternar Tema</button>
+        
+        <div class="control-group">
+            <label for="rowCount" style="font-size: 14px; font-weight: bold;">Qtd de Registros:</label>
+            <input type="number" id="rowCount" value="5" min="1" max="1000" style="width: 80px;">
+        </div>
+
+        <button onclick="generateData()">Gerar JSON</button>
+        <button class="btn-secondary" onclick="clearOutput()">Limpar Saída</button>
+    </div>
+
+    <div class="grid-container">
+        <!-- Coluna: Montador do Esquema -->
+        <div class="input-col">
+            <div class="col-header">
+                <span>Esquema de Dados (Powered by Faker)</span>
+                <button onclick="addSchemaRow()" style="padding: 4px 8px; font-size: 12px;">+ Adicionar Campo</button>
+            </div>
+            <div class="schema-builder" id="schemaBuilder">
+                <!-- Linhas inseridas via JS -->
+            </div>
+        </div>
+        
+        <!-- Coluna: Saída JSON -->
+        <div class="input-col">
+            <div class="col-header">
+                <span>Saída JSON Gerada</span>
+                <button onclick="copyOutput()" style="padding: 4px 8px; font-size: 12px;">Copiar JSON</button>
+            </div>
+            <div class="editor-wrapper">
+                <div class="line-numbers" id="outputLines">1</div>
+                <pre id="outputJson" class="code-output" onscroll="syncScroll('outputJson', 'outputLines')"></pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- Integrando a Biblioteca Faker.js via CDN como Modulo ES -->
+    <script type="module">
+        import { fakerPT_BR as faker } from 'https://cdn.jsdelivr.net/npm/@faker-js/faker/+esm';
+
+        // Anexando ao window para os botões do HTML conseguirem acessar
+        window.geradores = {
+            'uuid': () => faker.string.uuid(),
+            
+            // Pessoas
+            'nomeCompleto': () => faker.person.fullName(),
+            'primeiroNome': () => faker.person.firstName(),
+            'genero': () => faker.person.gender(),
+            'cargo': () => faker.person.jobTitle(),
+            
+            // Contato / Internet
+            'email': () => faker.internet.email(),
+            'telefone': () => faker.phone.number(),
+            'ip': () => faker.internet.ipv4(),
+            'mac': () => faker.internet.mac(),
+            'senha': () => faker.internet.password(),
+            'avatar': () => faker.image.avatar(),
+            
+            // Localização
+            'endereco': () => faker.location.streetAddress(),
+            'cidade': () => faker.location.city(),
+            'estado': () => faker.location.state(),
+            'cep': () => faker.location.zipCode(),
+            'pais': () => faker.location.country(),
+            'latitude': () => faker.location.latitude(),
+            'longitude': () => faker.location.longitude(),
+            
+            // Negócios / Comercial
+            'empresa': () => faker.company.name(),
+            'departamento': () => faker.commerce.department(),
+            'produto': () => faker.commerce.productName(),
+            
+            // Financeiro
+            'preco': () => parseFloat(faker.commerce.price()),
+            'moeda': () => faker.finance.currencyCode(),
+            'cartaoCredito': () => faker.finance.creditCardNumber(),
+            'iban': () => faker.finance.iban(),
+            
+            // Datas
+            'dataPassada': () => faker.date.past().toISOString(),
+            'dataFutura': () => faker.date.future().toISOString(),
+            'dataNascimento': () => faker.date.birthdate().toISOString(),
+            
+            // Diversos
+            'booleano': () => faker.datatype.boolean(),
+            'cor': () => faker.color.human(),
+            'palavra': () => faker.lorem.word(),
+            'frase': () => faker.lorem.sentence(),
+            'paragrafo': () => faker.lorem.paragraph()
+        };
+
+        const tipoOpcoes = `
+            <optgroup label="Identificadores">
+                <option value="uuid">ID / UUID</option>
+            </optgroup>
+            <optgroup label="Pessoas">
+                <option value="nomeCompleto">Nome Completo</option>
+                <option value="primeiroNome">Primeiro Nome</option>
+                <option value="genero">Gênero</option>
+                <option value="cargo">Cargo</option>
+            </optgroup>
+            <optgroup label="Contato & Internet">
+                <option value="email">E-mail</option>
+                <option value="telefone">Telefone</option>
+                <option value="ip">Endereço IPv4</option>
+                <option value="mac">Endereço MAC</option>
+                <option value="senha">Senha Aleatória</option>
+                <option value="avatar">URL Avatar</option>
+            </optgroup>
+            <optgroup label="Localização">
+                <option value="endereco">Endereço</option>
+                <option value="cidade">Cidade</option>
+                <option value="estado">Estado</option>
+                <option value="cep">CEP</option>
+                <option value="pais">País</option>
+                <option value="latitude">Latitude</option>
+                <option value="longitude">Longitude</option>
+            </optgroup>
+            <optgroup label="Comercial & Financeiro">
+                <option value="empresa">Empresa</option>
+                <option value="departamento">Departamento</option>
+                <option value="produto">Produto</option>
+                <option value="preco">Preço (Numérico)</option>
+                <option value="moeda">Moeda (Código)</option>
+                <option value="cartaoCredito">Cartão de Crédito</option>
+                <option value="iban">IBAN</option>
+            </optgroup>
+            <optgroup label="Datas">
+                <option value="dataPassada">Data Passada (ISO)</option>
+                <option value="dataFutura">Data Futura (ISO)</option>
+                <option value="dataNascimento">Data de Nascimento</option>
+            </optgroup>
+            <optgroup label="Diversos">
+                <option value="booleano">Booleano (True/False)</option>
+                <option value="cor">Cor</option>
+                <option value="palavra">Palavra</option>
+                <option value="frase">Frase</option>
+                <option value="paragrafo">Parágrafo</option>
+            </optgroup>
+        `;
+
+        window.addSchemaRow = function(keyName = '', defaultType = 'uuid') {
+            const builder = document.getElementById('schemaBuilder');
+            const row = document.createElement('div');
+            row.className = 'schema-row';
+            
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.placeholder = 'Nome da Chave (ex: id)';
+            input.value = keyName;
+            
+            const select = document.createElement('select');
+            select.innerHTML = tipoOpcoes;
+            select.value = defaultType;
+            
+            const btnDelete = document.createElement('button');
+            btnDelete.textContent = 'X';
+            btnDelete.className = 'btn-danger';
+            btnDelete.onclick = () => row.remove();
+            
+            row.appendChild(input);
+            row.appendChild(select);
+            row.appendChild(btnDelete);
+            builder.appendChild(row);
+        };
+
+        window.getActiveSchema = function() {
+            const rows = document.querySelectorAll('.schema-row');
+            const schema = [];
+            rows.forEach(row => {
+                const key = row.querySelector('input').value.trim();
+                const type = row.querySelector('select').value;
+                if (key) {
+                    schema.push({ key, type });
+                }
+            });
+            return schema;
+        };
+
+        window.generateData = function() {
+            const schema = window.getActiveSchema();
+            const rowCount = parseInt(document.getElementById('rowCount').value) || 1;
+            const outputArea = document.getElementById('outputJson');
+
+            if (schema.length === 0) {
+                outputArea.innerHTML = '<span class="error-highlight">Adicione ao menos um campo no esquema.</span>';
+                return;
+            }
+
+            const data = [];
+            for (let i = 0; i < rowCount; i++) {
+                const obj = {};
+                schema.forEach(field => {
+                    obj[field.key] = window.geradores[field.type](); 
+                });
+                data.push(obj);
+            }
+
+            const jsonString = JSON.stringify(data, null, 4);
+            outputArea.innerHTML = window.syntaxHighlight(jsonString);
+            window.updateLines('outputJson', 'outputLines');
+        };
+
+        window.addSchemaRow('id', 'uuid');
+        window.addSchemaRow('nome', 'nomeCompleto');
+        window.addSchemaRow('email', 'email');
+        window.addSchemaRow('empresa', 'empresa');
+        window.addSchemaRow('ip_acesso', 'ip');
+        window.addSchemaRow('status_ativo', 'booleano');
+        
+        // Gera a primeira carga de dados assim que o script carrega a biblioteca
+        window.generateData();
+    </script>
+
+    <script>
+        // Funções UI globais (fora do escopo do módulo para garantir funcionamento imediato)
+        window.toggleTheme = function() {
+            document.body.classList.toggle('light-mode');
+        };
+
+        window.escapeHtml = function(unsafe) {
+            return (unsafe || '').toString()
+                                .replace(/&/g, "&amp;")
+                                .replace(/</g, "&lt;")
+                                .replace(/>/g, "&gt;")
+                                .replace(/"/g, "&quot;")
+                                .replace(/'/g, "&#039;");
+        };
+
+        window.syntaxHighlight = function(json) {
+            json = window.escapeHtml(json);
+            return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+                let cls = 'number';
+                if (/^"/.test(match)) {
+                    if (/:$/.test(match)) {
+                        cls = 'key';
+                    } else {
+                        cls = 'string';
+                    }
+                } else if (/true|false/.test(match)) {
+                    cls = 'boolean';
+                } else if (/null/.test(match)) {
+                    cls = 'null';
+                }
+                return '<span class="' + cls + '">' + match + '</span>';
+            });
+        };
+
+        window.clearOutput = function() {
+            document.getElementById('outputJson').innerHTML = '';
+            window.updateLines('outputJson', 'outputLines');
+        };
+
+        window.copyOutput = async function() {
+            const outputText = document.getElementById('outputJson').innerText;
+            if (!outputText) return;
+            
+            try {
+                await navigator.clipboard.writeText(outputText);
+                const btn = event.target;
+                const originalText = btn.innerText;
+                btn.innerText = 'Copiado!';
+                setTimeout(() => btn.innerText = originalText, 2000);
+            } catch (err) {
+                console.error('Falha ao copiar: ', err);
+            }
+        };
+
+        window.updateLines = function(elementId, linesId) {
+            const el = document.getElementById(elementId);
+            const linesDiv = document.getElementById(linesId);
+            if (!el || !linesDiv) return;
+            
+            const text = el.innerText;
+            const linesCount = Math.max(1, (text.match(/\n/g) || []).length + 1);
+            
+            let linesText = '';
+            for (let i = 1; i <= linesCount; i++) {
+                linesText += i + '\n';
+            }
+            linesDiv.textContent = linesText;
+        };
+
+        window.syncScroll = function(sourceId, targetLinesId) {
+            const source = document.getElementById(sourceId);
+            const linesDiv = document.getElementById(targetLinesId);
+            linesDiv.scrollTop = source.scrollTop;
+        };
+    </script>
+</body>
+</html>
