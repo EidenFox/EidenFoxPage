@@ -17,6 +17,7 @@
             --neon-pink: #ff0073;
             --neon-purple: #81008a;
             --neon-blue: #00d2ff;
+            --neon-green: #00ff66;
             --border-color: rgba(255, 0, 115, 0.5);
             --header-bg: #2a0b30;
             --error-bg: rgba(255, 0, 0, 0.2);
@@ -41,6 +42,7 @@
             --header-bg: #ffe6f0;
             --error-bg: #ffe6e6;
             --error-border: #cc0000;
+            --neon-green: #00aa44;
 
             /* Cores de Sintaxe (Light Mode) */
             --syn-key: #d60060;
@@ -109,7 +111,7 @@
             border-radius: 4px;
             cursor: pointer;
             font-weight: bold;
-            transition: background-color 0.2s, box-shadow 0.2s;
+            transition: background-color 0.2s, box-shadow 0.2s, border-color 0.2s, color 0.2s;
             font-family: var(--font-title);
             font-size: 14px;
         }
@@ -148,6 +150,24 @@
         
         .btn-danger:hover {
             background-color: var(--error-bg);
+        }
+
+        .btn-mask {
+            background-color: transparent;
+            border: 1px solid var(--error-border);
+            color: var(--error-border);
+            padding: 6px 10px;
+            font-size: 12px;
+        }
+
+        .btn-mask.active {
+            border-color: var(--neon-green);
+            color: var(--neon-green);
+        }
+        
+        .btn-mask:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            box-shadow: none;
         }
 
         .grid-container {
@@ -315,11 +335,9 @@
         </div>
     </div>
 
-    <!-- Integrando a Biblioteca Faker.js via CDN como Modulo ES -->
     <script type="module">
         import { fakerPT_BR as faker } from 'https://cdn.jsdelivr.net/npm/@faker-js/faker/+esm';
 
-        // Anexando ao window para os botões do HTML conseguirem acessar
         window.geradores = {
             'uuid': () => faker.string.uuid(),
             
@@ -329,13 +347,15 @@
             'genero': () => faker.person.gender(),
             'cargo': () => faker.person.jobTitle(),
             
-            // Contato / Internet
+            // Contato / Internet / Docs
             'email': () => faker.internet.email(),
             'telefone': () => faker.phone.number(),
             'ip': () => faker.internet.ipv4(),
             'mac': () => faker.internet.mac(),
             'senha': () => faker.internet.password(),
             'avatar': () => faker.image.avatar(),
+            'cpf': () => `${faker.string.numeric(3)}.${faker.string.numeric(3)}.${faker.string.numeric(3)}-${faker.string.numeric(2)}`,
+            'cnpj': () => `${faker.string.numeric(2)}.${faker.string.numeric(3)}.${faker.string.numeric(3)}/${faker.string.numeric(4)}-${faker.string.numeric(2)}`,
             
             // Localização
             'endereco': () => faker.location.streetAddress(),
@@ -371,8 +391,10 @@
         };
 
         const tipoOpcoes = `
-            <optgroup label="Identificadores">
+            <optgroup label="Identificadores & Documentos">
                 <option value="uuid">ID / UUID</option>
+                <option value="cpf">CPF</option>
+                <option value="cnpj">CNPJ</option>
             </optgroup>
             <optgroup label="Pessoas">
                 <option value="nomeCompleto">Nome Completo</option>
@@ -433,6 +455,23 @@
             const select = document.createElement('select');
             select.innerHTML = tipoOpcoes;
             select.value = defaultType;
+
+            const btnMask = document.createElement('button');
+            btnMask.textContent = 'Mascara: ON';
+            btnMask.className = 'btn-mask active';
+            btnMask.dataset.mask = 'true';
+            btnMask.title = 'Remove caracteres especiais: ( - _ . , ` \' e espaços';
+            btnMask.onclick = function() {
+                if (this.dataset.mask === 'true') {
+                    this.dataset.mask = 'false';
+                    this.textContent = 'Mascara: OFF';
+                    this.classList.remove('active');
+                } else {
+                    this.dataset.mask = 'true';
+                    this.textContent = 'Mascara: ON';
+                    this.classList.add('active');
+                }
+            };
             
             const btnDelete = document.createElement('button');
             btnDelete.textContent = 'X';
@@ -441,6 +480,7 @@
             
             row.appendChild(input);
             row.appendChild(select);
+            row.appendChild(btnMask);
             row.appendChild(btnDelete);
             builder.appendChild(row);
         };
@@ -451,8 +491,9 @@
             rows.forEach(row => {
                 const key = row.querySelector('input').value.trim();
                 const type = row.querySelector('select').value;
+                const masked = row.querySelector('.btn-mask').dataset.mask === 'true';
                 if (key) {
-                    schema.push({ key, type });
+                    schema.push({ key, type, masked });
                 }
             });
             return schema;
@@ -472,7 +513,13 @@
             for (let i = 0; i < rowCount; i++) {
                 const obj = {};
                 schema.forEach(field => {
-                    obj[field.key] = window.geradores[field.type](); 
+                    let val = window.geradores[field.type](); 
+                    
+                    if (!field.masked && typeof val === 'string') {
+                        val = val.replace(/[()\-_.+,'`\s/]/g, '');
+                    }
+                    
+                    obj[field.key] = val;
                 });
                 data.push(obj);
             }
@@ -484,17 +531,15 @@
 
         window.addSchemaRow('id', 'uuid');
         window.addSchemaRow('nome', 'nomeCompleto');
+        window.addSchemaRow('telefone', 'telefone');
+        window.addSchemaRow('cpf', 'cpf');
         window.addSchemaRow('email', 'email');
-        window.addSchemaRow('empresa', 'empresa');
-        window.addSchemaRow('ip_acesso', 'ip');
         window.addSchemaRow('status_ativo', 'booleano');
         
-        // Gera a primeira carga de dados assim que o script carrega a biblioteca
         window.generateData();
     </script>
 
     <script>
-        // Funções UI globais (fora do escopo do módulo para garantir funcionamento imediato)
         window.toggleTheme = function() {
             document.body.classList.toggle('light-mode');
         };

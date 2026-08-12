@@ -345,42 +345,37 @@
             event.target.value = '';
         }
 
+        /* INICIO DE FUNÇÃO DE escapeHtml; esta função limpa strings para renderização segura em HTML. A conversão da aspas simples foi removida nesta versão para corrigir o bug de &#039; renderizando incorretamente na cópia/execução do SQL */
         function escapeHtml(unsafe) {
             return (unsafe || '').toString()
                                 .replace(/&/g, "&amp;")
                                 .replace(/</g, "&lt;")
                                 .replace(/>/g, "&gt;")
-                                .replace(/"/g, "&quot;")
-                                .replace(/'/g, "&#039;");
+                                .replace(/"/g, "&quot;");
         }
 
+        /* INICIO DE FUNÇÃO DE sqlHighlight; esta função adiciona cores aos comandos e tipos do SQL gerado */
         function sqlHighlight(sqlText) {
             let highlighted = escapeHtml(sqlText);
 
-            // Strings ('valor')
             highlighted = highlighted.replace(/('.*?')/g, '<span class="sql-string">$1</span>');
             
-            // Keywords
             const keywords = ['CREATE TABLE', 'INSERT INTO', 'VALUES', 'IF NOT EXISTS'];
             keywords.forEach(kw => {
                 const reg = new RegExp(`\\b${kw}\\b`, 'gi');
                 highlighted = highlighted.replace(reg, `<span class="sql-keyword">${kw}</span>`);
             });
 
-            // Types
             const types = ['VARCHAR', 'TEXT', 'INT', 'INTEGER', 'DECIMAL', 'BOOLEAN', 'JSON', 'JSONB', 'SERIAL', 'BIGINT'];
             types.forEach(type => {
                 const reg = new RegExp(`\\b${type}\\b(?:\\([0-9,]+\\))?`, 'gi');
                 highlighted = highlighted.replace(reg, match => `<span class="sql-type">${match}</span>`);
             });
 
-            // NULL and Booleans
             highlighted = highlighted.replace(/\bNULL\b/g, '<span class="sql-null">NULL</span>');
             highlighted = highlighted.replace(/\b(TRUE|FALSE)\b/gi, '<span class="sql-keyword">$1</span>');
             
-            // Numbers (simples, fora de strings)
             highlighted = highlighted.replace(/\b(\d+(?:\.\d+)?)\b/g, function(match, p1, offset, string) {
-                // Previne conflito caso o numero ja esteja dentro de uma tag span
                 if(string.substring(offset - 10, offset).includes('<span')) return match;
                 return `<span class="sql-number">${match}</span>`;
             });
@@ -394,7 +389,6 @@
             const type = typeof value;
             
             if (type === 'string') {
-                // Testa se parece uma data ISO para possivel type DATETIME, mas fallback seguro é texto
                 if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value)) return 'TIMESTAMP';
                 return dialect === 'mysql' ? 'VARCHAR(255)' : 'TEXT';
             }
@@ -417,11 +411,9 @@
             const type = typeof value;
             
             if (type === 'string') {
-                // Escapa aspas simples no SQL duplicando-as
                 return `'${value.replace(/'/g, "''")}'`;
             }
             if (type === 'object') {
-                // Transforma arrays/objetos em string JSON e escapa
                 const jsonStr = JSON.stringify(value);
                 return `'${jsonStr.replace(/'/g, "''")}'`;
             }
@@ -437,7 +429,6 @@
             let tableName = document.getElementById('tableName').value.trim() || 'registros';
             const dialect = document.getElementById('sqlDialect').value;
             
-            // Limpa caracteres especiais do nome da tabela e aplica delimitadores
             tableName = tableName.replace(/[^a-zA-Z0-9_]/g, '');
             const tableId = dialect === 'mysql' ? `\`${tableName}\`` : `"${tableName}"`;
 
@@ -451,7 +442,6 @@
             try {
                 let data = JSON.parse(input);
                 
-                // Força ser um array de objetos
                 if (!Array.isArray(data)) {
                     if (typeof data === 'object' && data !== null) {
                         data = [data];
@@ -463,8 +453,6 @@
                     throw new Error("O Array JSON está vazio.");
                 }
 
-                // 1. Extrair Schema (baseado no primeiro objeto, ou mesclando todos)
-                // Para simplificar, vamos extrair as colunas do primeiro objeto
                 const columns = {};
                 data.forEach(row => {
                     if(typeof row === 'object' && row !== null) {
@@ -480,7 +468,6 @@
                     throw new Error("Nenhuma propriedade válida encontrada nos objetos.");
                 }
 
-                // 2. Gerar CREATE TABLE
                 let sqlOut = `CREATE TABLE IF NOT EXISTS ${tableId} (\n`;
                 const colDefs = Object.entries(columns).map(([colName, colType]) => {
                     const colId = dialect === 'mysql' ? `\`${colName}\`` : `"${colName}"`;
@@ -488,7 +475,6 @@
                 });
                 sqlOut += colDefs.join(',\n') + '\n);\n\n';
 
-                // 3. Gerar INSERT INTO (Lotes para melhor performance visual)
                 const colNames = Object.keys(columns);
                 const colIds = colNames.map(c => dialect === 'mysql' ? `\`${c}\`` : `"${c}"`).join(', ');
                 
@@ -503,7 +489,6 @@
 
                 sqlOut += valueRows.join(',\n') + ';\n';
 
-                // Renderiza Saída
                 outputArea.innerHTML = sqlHighlight(sqlOut);
                 updateLines('outputSql', 'outputLines');
                 hideStatus();
