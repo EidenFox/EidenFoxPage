@@ -11,7 +11,6 @@
 
     <style>
         :root {
-            /* Tema Padrão (Dark/Neon baseado no seu estilo, sem glass) */
             --bg-color: #120118;
             --panel-bg: #1e0a24;
             --text-color: aliceblue;
@@ -19,24 +18,21 @@
             --neon-purple: #81008a;
             --border-color: rgba(255, 0, 115, 0.5);
             --header-bg: #2a0b30;
-            --diff-bg: rgba(255, 0, 115, 0.3);
+            --diff-bg: rgba(255, 0, 115, 0.15);
             --diff-text: #ffffff;
-            --diff-line-bg: rgba(255, 0, 115, 0.15);
             --font-mono: 'Courier New', Courier, monospace;
             --font-title: 'Merienda', cursive;
             --box-height: 300px;
         }
 
         body.light-mode {
-            /* Tema Claro (Alternativo) */
             --bg-color: #f4f4f9;
             --panel-bg: #ffffff;
             --text-color: #333333;
             --border-color: #ff0073;
             --header-bg: #ffe6f0;
-            --diff-bg: #fff3cd;
-            --diff-text: #856404;
-            --diff-line-bg: #fff8e1;
+            --diff-bg: #fff8e1;
+            --diff-text: #333333;
         }
 
         body {
@@ -87,6 +83,13 @@
 
         input[type="number"] {
             width: 60px;
+        }
+
+        input[type="checkbox"] {
+            cursor: pointer;
+            width: 16px;
+            height: 16px;
+            accent-color: var(--neon-pink);
         }
 
         button, .file-label {
@@ -201,6 +204,26 @@
             color: var(--diff-text);
         }
 
+        .inline-diff {
+            background-color: var(--neon-pink);
+            color: white;
+            border-radius: 3px;
+            padding: 0 2px;
+            font-weight: bold;
+            box-shadow: 0 0 5px rgba(255, 0, 115, 0.8);
+        }
+
+        .inline-diff-empty {
+            display: inline-block;
+            width: 4px;
+            height: 12px;
+            background-color: var(--neon-pink);
+            margin: 0 2px;
+            vertical-align: middle;
+            border-radius: 2px;
+            box-shadow: 0 0 5px rgba(255, 0, 115, 0.8);
+        }
+
         .results-list {
             background: var(--panel-bg);
             padding: 20px;
@@ -234,7 +257,7 @@
         }
 
         .diff-item li {
-            background: var(--diff-line-bg);
+            background: var(--header-bg);
             padding: 8px 12px;
             margin-bottom: 5px;
             border-left: 3px solid var(--neon-pink);
@@ -249,7 +272,6 @@
             display: none;
         }
         
-        /* Scrollbar customizada para combinar com o tema */
         ::-webkit-scrollbar {
             width: 8px;
             height: 8px;
@@ -283,6 +305,11 @@
             <label for="heightSlider">Tamanho das caixas:</label>
             <input type="range" id="heightSlider" min="200" max="800" value="300" oninput="updateHeight(this.value)">
             <span id="heightDisplay">300px</span>
+        </div>
+
+        <div class="control-group" style="margin-left: auto;">
+            <input type="checkbox" id="considerSpacing">
+            <label for="considerSpacing" style="font-size: 14px; cursor: pointer;">Considerar espaçamento/tabulação</label>
         </div>
 
         <button onclick="compareTexts()">Comparar Textos</button>
@@ -357,6 +384,7 @@
 
         function compareTexts() {
             const count = parseInt(document.getElementById('boxCount').value);
+            const considerSpacing = document.getElementById('considerSpacing').checked;
             const texts = [];
             
             for (let i = 1; i <= count; i++) {
@@ -371,19 +399,127 @@
 
             for (let i = 0; i < maxLines; i++) {
                 const currentLines = texts.map(t => t[i] !== undefined ? t[i] : '');
-                const isDiff = !currentLines.every(val => val === currentLines[0]);
+                
+                let isDiff = false;
+                if (considerSpacing) {
+                    isDiff = !currentLines.every(val => val === currentLines[0]);
+                } else {
+                    const baseLineFormatted = currentLines[0].replace(/\s+/g, '');
+                    isDiff = !currentLines.every(val => val.replace(/\s+/g, '') === baseLineFormatted);
+                }
+
+                let prefixLen = 0;
+                let suffixLen = 0;
+                let cleanPrefixLen = 0;
+                let cleanSuffixLen = 0;
+
+                /* INICIO DE FUNÇÃO DE Mapeamento de Prefixo/Sufixo; Calcula os caracteres comuns com ou sem formatação para isolar a divergencia in-line */
+                if (isDiff) {
+                    if (considerSpacing) {
+                        let minLen = Math.min(...currentLines.map(s => s.length));
+                        while (prefixLen < minLen) {
+                            let char = currentLines[0][prefixLen];
+                            if (currentLines.every(s => s[prefixLen] === char)) {
+                                prefixLen++;
+                            } else {
+                                break;
+                            }
+                        }
+
+                        let minRemLen = Math.min(...currentLines.map(s => s.length - prefixLen));
+                        while (suffixLen < minRemLen) {
+                            let char = currentLines[0][currentLines[0].length - 1 - suffixLen];
+                            if (currentLines.every(s => s[s.length - 1 - suffixLen] === char)) {
+                                suffixLen++;
+                            } else {
+                                break;
+                            }
+                        }
+                    } else {
+                        const cleanStrs = currentLines.map(s => s.replace(/\s+/g, ''));
+                        let minLen = Math.min(...cleanStrs.map(s => s.length));
+                        while (cleanPrefixLen < minLen) {
+                            let char = cleanStrs[0][cleanPrefixLen];
+                            if (cleanStrs.every(s => s[cleanPrefixLen] === char)) {
+                                cleanPrefixLen++;
+                            } else {
+                                break;
+                            }
+                        }
+
+                        let minRemLen = Math.min(...cleanStrs.map(s => s.length - cleanPrefixLen));
+                        while (cleanSuffixLen < minRemLen) {
+                            let char = cleanStrs[0][cleanStrs[0].length - 1 - cleanSuffixLen];
+                            if (cleanStrs.every(s => s[s.length - 1 - cleanSuffixLen] === char)) {
+                                cleanSuffixLen++;
+                            } else {
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                let currentLineHtmls = [];
 
                 currentLines.forEach((line, colIndex) => {
-                    const safeLine = escapeHtml(line) || ' ';
+                    let contentHtml = '';
+                    
+                    if (isDiff) {
+                        let origStart, origEnd;
+
+                        if (considerSpacing) {
+                            origStart = prefixLen;
+                            origEnd = line.length - suffixLen;
+                        } else {
+                            let map = [];
+                            let cleanStr = "";
+                            for (let j = 0; j < line.length; j++) {
+                                if (!/\s/.test(line[j])) {
+                                    map.push(j);
+                                    cleanStr += line[j];
+                                }
+                            }
+                            
+                            if (cleanPrefixLen >= cleanStr.length - cleanSuffixLen) {
+                                if (cleanPrefixLen === 0) {
+                                    origStart = map.length > 0 ? map[0] : line.length;
+                                } else {
+                                    origStart = map[cleanPrefixLen - 1] + 1;
+                                }
+                                origEnd = origStart;
+                            } else {
+                                origStart = map[cleanPrefixLen];
+                                origEnd = map[cleanStr.length - cleanSuffixLen - 1] + 1;
+                            }
+                        }
+
+                        const prefix = line.substring(0, origStart);
+                        const diffPart = line.substring(origStart, origEnd);
+                        const suffix = line.substring(origEnd);
+                        
+                        contentHtml = escapeHtml(prefix);
+                        
+                        if (diffPart.length > 0) {
+                            contentHtml += `<span class="inline-diff">${escapeHtml(diffPart)}</span>`;
+                        } else {
+                            contentHtml += `<span class="inline-diff-empty" title="Caracteres ausentes aqui"></span>`;
+                        }
+                        
+                        contentHtml += escapeHtml(suffix);
+                    } else {
+                        contentHtml = escapeHtml(line) || ' ';
+                    }
+
+                    currentLineHtmls.push(contentHtml);
                     const diffClass = isDiff ? ' diff' : '';
-                    diffColsHtml[colIndex] += `<div class="line${diffClass}"><span class="line-num">${i + 1}</span><span class="content">${safeLine}</span></div>`;
+                    diffColsHtml[colIndex] += `<div class="line${diffClass}"><span class="line-num">${i + 1}</span><span class="content">${contentHtml}</span></div>`;
                 });
 
                 if (isDiff) {
                     hasDifferences = true;
                     resultsHtml += `<div class="diff-item"><strong>Linha ${i + 1}</strong><ul>`;
-                    currentLines.forEach((line, colIndex) => {
-                        resultsHtml += `<li><strong>Texto ${colIndex + 1}:</strong> ${escapeHtml(line) || '<em>(linha vazia)</em>'}</li>`;
+                    currentLineHtmls.forEach((html, colIndex) => {
+                        resultsHtml += `<li><strong>Texto ${colIndex + 1}:</strong> ${html || '<em>(linha vazia)</em>'}</li>`;
                     });
                     resultsHtml += `</ul></div>`;
                 }
@@ -405,7 +541,7 @@
 
             const resultsList = document.getElementById('resultsList');
             if (!hasDifferences) {
-                resultsList.innerHTML = '<p>Nenhuma diferença encontrada. Os textos são idênticos.</p>';
+                resultsList.innerHTML = '<p>Nenhuma diferença encontrada. Os textos são idênticos ou diferem apenas em espaçamento.</p>';
             } else {
                 resultsList.innerHTML = resultsHtml;
             }
